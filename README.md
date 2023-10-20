@@ -2,4 +2,4 @@
 
 Implementation of ExpGen
 
-(code comming soon)
+(code coming soon)
