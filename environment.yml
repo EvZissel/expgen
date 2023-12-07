@@ -1,0 +1,23 @@
+name: expgen_env
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy-base=1.20.1
+  - pandas=1.2.4
+  - c-compiler=1.0.4
+  - cmake=3.14.0
+  - python=3.7.3
+  - qt=5.12.5
+  - pip
+  - pip:
+    - matplotlib==3.4.1
+    - numpy==1.17.2
+    - torch==1.8.1
+    - torchmeta==1.7.0
+    - torchvision==0.9.1
+    - gym==0.18.0
+    - gym3==0.3.3
+    - h5py==3.2.1
+    - filelock==3.0.10
