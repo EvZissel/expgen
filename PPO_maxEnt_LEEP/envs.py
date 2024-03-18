@@ -1,7 +1,7 @@
 
 from gym.spaces.box import Box
 from procgen import ProcgenEnv
-from PPO_LEEP.procgen_wrappers import *
+from PPO_maxEnt_LEEP.procgen_wrappers import *
 
 try:
     import dmc2gym
@@ -29,7 +29,7 @@ def make_ProcgenEnvs(num_envs,
                      restrict_themes,
                      use_monochrome_assets,
                      rand_seed,
-                     center_agent,
+                     center_agent=True,
                      use_sequential_levels=False,
                      mask_size=0,
                      normalize_rew=False,
@@ -144,7 +144,7 @@ class VecPyTorchFrameStack(VecEnvWrapper):
         self.venv = venv
         self.nstack = nstack
 
-        wos = venv.observation_space  # wrapped ob space
+        wos = venv.observation_space  # Wrapped ob space
         self.shape_dim0 = wos.shape[0]
 
         low = np.repeat(wos.low, self.nstack, axis=0)

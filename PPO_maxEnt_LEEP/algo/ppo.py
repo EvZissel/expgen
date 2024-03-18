@@ -17,8 +17,6 @@ class PPO():
                  eps=None,
                  max_grad_norm=None,
                  use_clipped_value_loss=True,
-                 no_special_grad_for_critic=False,
-                 attention_policy=False,
                  num_tasks=0,
                  weight_decay=0.0,
                  KLdiv_loss=False):
@@ -38,37 +36,13 @@ class PPO():
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-        self.attention_parameters = []
-        self.non_attention_parameters = []
+        self.train_parameters = []
         for name, p in actor_critic.named_parameters():
-            if 'attention' in name:
-                self.attention_parameters.append(p)
-            else:
-                self.non_attention_parameters.append(p)
+            self.train_parameters.append(p)
 
-        if no_special_grad_for_critic:
-            critic_params = []
-            non_critic_params = []
-            for name, p in actor_critic.named_parameters():
-                if 'critic' in name:
-                    critic_params.append(p)
-                else:
-                    non_critic_params.append(p)
-            self.optimizer = optim.Adam([{'params': critic_params,
-                                          'special_grad': False},
-                                        {'params': non_critic_params,
-                                         'special_grad': True}],
-                                        lr=lr, eps=eps, weight_decay=weight_decay)
-        else:
-            if attention_policy:
-                self.optimizer = optim.Adam(self.attention_parameters, lr=lr, eps=eps, weight_decay=weight_decay)
-            else:
-                self.optimizer = optim.Adam(self.non_attention_parameters, lr=lr, eps=eps, weight_decay=weight_decay)
+        self.optimizer = optim.Adam(self.train_parameters, lr=lr, eps=eps, weight_decay=weight_decay)
 
-
-        self.attention_policy = attention_policy
-
-    def update(self, rollouts, attention_update=False, maxEntAgent=None):
+    def update(self, rollouts, maxEntAgent=None):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
         advantages = (advantages - advantages.mean()) / (
             advantages.std() + 1e-8)
@@ -95,18 +69,18 @@ class PPO():
                 task_losses = []
                 for task in range(len(sample)):
                     obs_batch, recurrent_hidden_states_batch, actions_batch, \
-                       value_preds_batch, return_batch, masks_batch, attn_masks_batch, attn_masks1_batch, attn_masks2_batch, attn_masks3_batch, old_action_log_probs_batch, \
+                       value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, \
                             adv_targ = sample[task]
 
                     # Reshape to do in a single forward pass for all steps
                     values, action_log_probs, dist_entropy, dist_probs, _ = self.actor_critic.evaluate_actions(
-                        obs_batch, recurrent_hidden_states_batch, masks_batch, attn_masks_batch, attn_masks1_batch, attn_masks2_batch, attn_masks3_batch,
-                        actions_batch, attention_act=attention_update)
+                        obs_batch, recurrent_hidden_states_batch, masks_batch,
+                        actions_batch)
 
                     if self.KLdiv_loss:
                         _, _, _, maxEnt_dist_probs, _  = maxEntAgent.actor_critic.evaluate_actions(
-                            obs_batch, recurrent_hidden_states_batch, masks_batch, attn_masks_batch, attn_masks1_batch, attn_masks2_batch, attn_masks3_batch,
-                            actions_batch, attention_act=attention_update)
+                            obs_batch, recurrent_hidden_states_batch, masks_batch,
+                            actions_batch)
                         kl_loss = F.kl_div(dist_probs.log(), maxEnt_dist_probs.log(),reduction='batchmean', log_target=True)
 
                     dist_entropy = dist_entropy
@@ -141,11 +115,7 @@ class PPO():
                 if self.KLdiv_loss:
                     kldiv_loss_epoch += kl_loss.item()
 
-                if self.attention_policy:
-                    nn.utils.clip_grad_norm_(self.attention_parameters,
-                                             self.max_grad_norm)
-                else:
-                    nn.utils.clip_grad_norm_(self.non_attention_parameters,
+                nn.utils.clip_grad_norm_(self.train_parameters,
                                              self.max_grad_norm)
 
                 self.optimizer.step()

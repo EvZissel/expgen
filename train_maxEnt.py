@@ -1,21 +1,21 @@
+import pathlib
 
-from PPO_LEEP import algo, utils
-from PPO_LEEP.arguments import get_args
-from PPO_LEEP.envs import make_ProcgenEnvs
-from PPO_LEEP.model import Policy, ImpalaModel
-from PPO_LEEP.storage import RolloutStorage
+from PPO_maxEnt_LEEP import algo, utils
+from PPO_maxEnt_LEEP.arguments import get_args
+from PPO_maxEnt_LEEP.envs import make_ProcgenEnvs
+from PPO_maxEnt_LEEP.model import Policy, ImpalaModel
+from PPO_maxEnt_LEEP.storage import RolloutStorage
 from evaluation import evaluate_procgen_maxEnt_avepool_original_L2
-from PPO_LEEP.procgen_wrappers import *
-from PPO_LEEP.logger import maxEnt_Logger
+from PPO_maxEnt_LEEP.procgen_wrappers import *
+from PPO_maxEnt_LEEP.logger import maxEnt_Logger
+import PPO_maxEnt_LEEP.hyperparams as hps
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 
-#Here we run all experiments with random policies (Train and Test)
-EVAL_ENVS = ['train_eval', 'test_eval_nondet']
-
+EVAL_ENVS = ['train_eval', 'test_eval']
 
 def main():
     args = get_args()
@@ -29,38 +29,43 @@ def main():
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
-    logdir_ = args.env_name + '_seed_' + str(args.seed)
-    logdir_ = logdir_ + 'maxEnt'
+    logdir_ = args.env_name + '_ppo' + '_seed_' + str(args.seed)
+    logdir_ = logdir_ + '_maxEnt'
     logdir = os.path.join(os.path.expanduser(args.log_dir), logdir_)
     utils.cleanup_log_dir(logdir)
 
-
+    print("logdir: " + logdir)
+    print("printing args")
     argslog = pd.DataFrame(columns=['args', 'value'])
     for key in vars(args):
         log = [key] + [vars(args)[key]]
         argslog.loc[len(argslog)] = log
-
-    print("logdir: " + logdir)
-    for key in vars(args):
         print(key, ':', vars(args)[key])
 
     with open(logdir + '/args.csv', 'w') as f:
         argslog.to_csv(f, index=False)
 
+    progresslog = pd.DataFrame(columns=['timesteps', 'train intrinsic mean', 'train intrinsic min', 'train intrinsic max',
+                                        'train extrinsic mean', 'train extrinsic min', 'train extrinsic max',
+                                        'train vs oracle mean', 'train vs oracle min', 'train vs oracle max',
+                                        'train completed mean', 'train completed min', 'train completed max',
+                                        'test intrinsic mean', 'test intrinsic min', 'test intrinsic max',
+                                        'test extrinsic mean', 'test extrinsic min', 'test extrinsic max',
+                                        'test vs oracle mean', 'test vs oracle min', 'test vs oracle max',
+                                        'test completed mean', 'test completed min', 'test completed max'])
     torch.set_num_threads(1)
     device = torch.device("cuda:{}".format(args.gpu_device) if args.cuda else "cpu")
 
     print('making envs...')
-
     max_reward_seeds = {
         'train_eval': [],
-        'test_eval_nondet': []
+        'test_eval': []
     }
 
     test_start_level = args.start_level + args.num_level + 1
     start_train_test = {
         'train_eval': args.start_level,
-        'test_eval_nondet': test_start_level
+        'test_eval': test_start_level
     }
 
     down_sample_avg = nn.AvgPool2d(args.kernel_size, stride=args.stride)
@@ -94,11 +99,10 @@ def main():
                             num_levels=args.num_level,
                             distribution_mode=args.distribution_mode,
                             use_generated_assets=args.use_generated_assets,
-                            use_backgrounds=True,
+                            use_backgrounds=args.use_backgrounds,
                             restrict_themes=args.restrict_themes,
                             use_monochrome_assets=args.use_monochrome_assets,
                             rand_seed=args.seed,
-                            center_agent=args.center_agent,
                             mask_size=args.mask_size,
                             normalize_rew=args.normalize_rew,
                             mask_all=args.mask_all,
@@ -110,7 +114,7 @@ def main():
                                      num_levels=args.num_level,
                                      distribution_mode=args.distribution_mode,
                                      use_generated_assets=args.use_generated_assets,
-                                     use_backgrounds=True,
+                                     use_backgrounds=args.use_backgrounds,
                                      restrict_themes=args.restrict_themes,
                                      use_monochrome_assets=args.use_monochrome_assets,
                                      rand_seed=args.seed,
@@ -127,27 +131,25 @@ def main():
                                                    num_levels=args.num_test_level,
                                                    distribution_mode=args.distribution_mode,
                                                    use_generated_assets=args.use_generated_assets,
-                                                   use_backgrounds=True,
+                                                   use_backgrounds=args.use_backgrounds,
                                                    restrict_themes=args.restrict_themes,
                                                    use_monochrome_assets=args.use_monochrome_assets,
                                                    rand_seed=args.seed,
-                                                   center_agent=args.center_agent,
                                                    mask_size=args.mask_size,
                                                    normalize_rew=args.normalize_rew,
                                                    mask_all=args.mask_all,
                                                    device=device)
 
-    eval_envs_dic['test_eval_nondet'] = make_ProcgenEnvs(num_envs=args.num_processes,
+    eval_envs_dic['test_eval'] = make_ProcgenEnvs(num_envs=args.num_processes,
                                                   env_name=args.env_name,
                                                   start_level=test_start_level,
                                                   num_levels=args.num_test_level,
                                                   distribution_mode=args.distribution_mode,
                                                   use_generated_assets=args.use_generated_assets,
-                                                  use_backgrounds=True,
+                                                  use_backgrounds=args.use_backgrounds,
                                                   restrict_themes=args.restrict_themes,
                                                   use_monochrome_assets=args.use_monochrome_assets,
                                                   rand_seed=args.seed,
-                                                  center_agent=args.center_agent,
                                                   mask_size=args.mask_size,
                                                   normalize_rew=args.normalize_rew,
                                                   mask_all=args.mask_all,
@@ -161,7 +163,7 @@ def main():
                                                             num_levels=args.num_test_level,
                                                             distribution_mode=args.distribution_mode,
                                                             use_generated_assets=args.use_generated_assets,
-                                                            use_backgrounds=True,
+                                                            use_backgrounds=args.use_backgrounds,
                                                             restrict_themes=args.restrict_themes,
                                                             use_monochrome_assets=args.use_monochrome_assets,
                                                             rand_seed=args.seed,
@@ -171,13 +173,13 @@ def main():
                                                             mask_all=args.mask_all,
                                                             device=device)
 
-    eval_envs_dic_full_obs['test_eval_nondet'] = make_ProcgenEnvs(num_envs=args.num_processes,
+    eval_envs_dic_full_obs['test_eval'] = make_ProcgenEnvs(num_envs=args.num_processes,
                                                            env_name=args.env_name,
                                                            start_level=test_start_level,
                                                            num_levels=args.num_test_level,
                                                            distribution_mode=args.distribution_mode,
                                                            use_generated_assets=args.use_generated_assets,
-                                                           use_backgrounds=True,
+                                                           use_backgrounds=args.use_backgrounds,
                                                            restrict_themes=args.restrict_themes,
                                                            use_monochrome_assets=args.use_monochrome_assets,
                                                            rand_seed=args.seed,
@@ -197,10 +199,7 @@ def main():
         epsilon_RPO=args.epsilon_RPO)
     actor_critic.to(device)
 
-    if args.algo != 'ppo':
-        raise print("only PPO is supported")
-
-    # training agent
+    # Training agent
     agent = algo.PPO(
         actor_critic,
         args.clip_param,
@@ -211,18 +210,17 @@ def main():
         lr=args.lr,
         eps=args.eps,
         num_tasks=args.num_processes,
-        attention_policy=False,
         max_grad_norm=args.max_grad_norm,
         weight_decay=args.weight_decay)
 
-    # rollout storage for agent
+    # Rollout storage for agent
     rollouts = RolloutStorage(args.num_steps, args.num_processes,
                               envs.observation_space.shape, envs.observation_space.shape, envs.action_space,
-                              actor_critic.recurrent_hidden_state_size, args.mask_size, device=device)
+                              actor_critic.recurrent_hidden_state_size, device=device)
 
     # Load previous model
     if (args.continue_from_epoch > 0) and args.save_dir != "":
-        save_path = args.save_dir
+        save_path = pathlib.Path(args.save_dir, args.env + '_ppo_seed_' + args.seed + '_maxEnt')
         actor_critic_weighs = torch.load(
             os.path.join(save_path, args.env_name + "-epoch-{}.pt".format(args.continue_from_epoch)),
             map_location=device)
@@ -246,25 +244,25 @@ def main():
 
     obs_train = eval_envs_dic['train_eval'].reset()
     logger.obs['train_eval'].copy_(obs_train)
-    obs_train_ds = down_sample_avg(obs_train)
+    obs_train_full = eval_envs_dic_full_obs['train_eval'].reset()
+    obs_train_ds = down_sample_avg(obs_train_full)
     for i in range(args.num_processes):
         logger.obs_vec_ds['train_eval'][i].append(obs_train_ds[i])
-    obs_train_full = eval_envs_dic_full_obs['train_eval'].reset()
     logger.obs_full['train_eval'].copy_(obs_train_full)
     logger.obs_sum['train_eval'].copy_(torch.zeros_like(obs_train_full))
     logger.obs0['train_eval'].copy_(obs_train_full)
 
-    obs_test_nondet = eval_envs_dic['test_eval_nondet'].reset()
-    logger.obs['test_eval_nondet'].copy_(obs_test_nondet)
-    obs_test_ds = down_sample_avg(obs_test_nondet)
+    obs_test = eval_envs_dic['test_eval'].reset()
+    logger.obs['test_eval'].copy_(obs_test)
+    obs_test_full = eval_envs_dic_full_obs['test_eval'].reset()
+    obs_test_ds = down_sample_avg(obs_test_full)
     for i in range(args.num_processes):
-        logger.obs_vec_ds['test_eval_nondet'][i].append(obs_test_ds[i])
-    obs_test_full = eval_envs_dic_full_obs['test_eval_nondet'].reset()
-    logger.obs_full['test_eval_nondet'].copy_(obs_test_full)
-    logger.obs_sum['test_eval_nondet'].copy_(torch.zeros_like(obs_test_full))
-    logger.obs0['test_eval_nondet'].copy_(obs_test_full)
+        logger.obs_vec_ds['test_eval'][i].append(obs_test_ds[i])
+    logger.obs_full['test_eval'].copy_(obs_test_full)
+    logger.obs_sum['test_eval'].copy_(torch.zeros_like(obs_test_full))
+    logger.obs0['test_eval'].copy_(obs_test_full)
 
-    # plot mazes
+    # Plot mazes
     fig = plt.figure(figsize=(20, 20))
     columns = 5
     rows = 5
@@ -274,22 +272,21 @@ def main():
         plt.savefig(logdir + '/fig.png')
 
     seeds = torch.zeros(args.num_processes, 1)
+    num_env_steps = hps.num_env_steps['maxEnt']
     num_updates = int(
-        100e6) // args.num_steps // args.num_processes
+        num_env_steps) // args.num_steps // args.num_processes
 
 
     for j in range(args.continue_from_epoch, args.continue_from_epoch + num_updates):
 
-        # policy rollouts
+        # Policy rollouts
         actor_critic.eval()
         for step in range(args.num_steps):
             # Sample actions
             with torch.no_grad():
-                value, action, action_log_prob, _, recurrent_hidden_states, attn_masks, attn_masks1, attn_masks2, attn_masks3 = actor_critic.act(
+                value, action, action_log_prob, _, recurrent_hidden_states = actor_critic.act(
                     rollouts.obs[step].to(device), rollouts.recurrent_hidden_states[step].to(device),
-                    rollouts.masks[step].to(device), rollouts.attn_masks[step].to(device),
-                    rollouts.attn_masks1[step].to(device), rollouts.attn_masks2[step].to(device),
-                    rollouts.attn_masks3[step].to(device))
+                    rollouts.masks[step].to(device))
 
             # Observe reward and next obs
             obs, reward, done, infos = envs.step(action.squeeze().cpu().numpy())
@@ -331,20 +328,17 @@ def main():
                 [[0.0] if 'bad_transition' in info.keys() else [1.0]
                  for info in infos])
             rollouts.insert(obs, recurrent_hidden_states, action,
-                            action_log_prob, value, torch.from_numpy(int_reward).unsqueeze(1), masks, bad_masks,
-                            attn_masks, attn_masks1, attn_masks2, attn_masks3, seeds, infos, obs_full)
+                            action_log_prob, value, torch.from_numpy(int_reward).unsqueeze(1), masks, bad_masks, seeds, infos, obs_full)
             rollouts.obs_ds[rollouts.step].copy_(obs_ds)
 
         with torch.no_grad():
             next_value = actor_critic.get_value(
                 rollouts.obs[-1].to(device), rollouts.recurrent_hidden_states[-1].to(device),
-                rollouts.masks[-1].to(device), rollouts.attn_masks[-1].to(device), rollouts.attn_masks1[-1].to(device),
-                rollouts.attn_masks2[-1].to(device), rollouts.attn_masks3[-1].to(device)).detach()
+                rollouts.masks[-1].to(device)).detach()
 
         actor_critic.train()
-        gamma = 0.9
-        rollouts.compute_returns(next_value, args.use_gae, gamma,
-                                 args.gae_lambda, args.use_proper_time_limits)
+        gamma = hps.gamma[args.env_name]
+        rollouts.compute_returns(next_value, use_gae=True, gamma=gamma, gae_lambda=args.gae_lambda)
 
         value_loss, action_loss, dist_entropy, _ = agent.update(rollouts)
 
@@ -353,29 +347,15 @@ def main():
         rew_batch, done_batch = rollouts.fetch_log_data()
         logger.feed_train(rew_batch, done_batch[1:])
 
-        # save for every interval-th episode or for the last epoch
-        if (j % args.save_interval == 0 or j == args.continue_from_epoch + num_updates - 1):
+        # Save for every interval-th episode or for the last epoch
+        if (j % args.save_interval == 0 or j == args.continue_from_epoch + num_updates - 1) and j > args.continue_from_epoch:
             torch.save({'state_dict': actor_critic.state_dict(), 'optimizer_state_dict': agent.optimizer.state_dict(),
                         'step': j}, os.path.join(logdir, args.env_name + "-epoch-{}.pt".format(j)))
 
-        # print some stats
-        if j % args.log_interval == 0:
-            total_num_steps = (j + 1) * args.num_processes * args.num_steps
 
-            train_statistics = logger.get_train_val_statistics()
-            print(
-                "Updates {}, num timesteps {}, num training episodes {} \n Last 128 training episodes: mean/median reward {:.1f}/{:.1f}, "
-                "min/max reward {:.1f}/{:.1f}, dist_entropy {} , value_loss {}, action_loss {}, unique seeds {}\n"
-                    .format(j, total_num_steps,
-                            logger.num_episodes, train_statistics['Rewards_mean_episodes'],
-                            train_statistics['Rewards_median_episodes'], train_statistics['Rewards_min_episodes'],
-                            train_statistics['Rewards_max_episodes'], dist_entropy, value_loss,
-                            action_loss, np.unique(rollouts.seeds.squeeze().numpy()).size))
-
-        # evaluate agent on evaluation tasks
+        # Evaluate agent on evaluation tasks
         if ((args.eval_interval is not None and j % args.eval_interval == 0) or j == args.continue_from_epoch):
             actor_critic.eval()
-            printout = f'Seed {args.seed} Iter {j} '
             eval_dic_rew = {}
             eval_dic_int_rew = {}
             eval_dic_done = {}
@@ -385,22 +365,64 @@ def main():
                 eval_dic_rew[eval_disp_name], eval_dic_int_rew[eval_disp_name], eval_dic_done[eval_disp_name], \
                 eval_dic_seeds[eval_disp_name] = evaluate_procgen_maxEnt_avepool_original_L2(actor_critic, eval_envs_dic,
                                                                                           eval_envs_dic_full_obs,
-                                                                                          eval_disp_name,
-                                                                                          args.num_processes, device,
+                                                                                          eval_disp_name, device,
                                                                                           args.num_steps, logger, args.num_buffer,
                                                                                           kernel_size=args.kernel_size,
                                                                                           stride=args.stride, deterministic=False, p_norm=args.p_norm, neighbor_size=args.neighbor_size)
 
 
-            logger.feed_eval_test_nondet(eval_dic_int_rew['train_eval'], eval_dic_done['train_eval'], eval_dic_rew['train_eval'],
-                                         eval_dic_int_rew['test_eval_nondet'], eval_dic_done['test_eval_nondet'], eval_dic_rew['test_eval_nondet'],
-                                         eval_dic_seeds['train_eval'], eval_dic_seeds['test_eval_nondet'])
-            episode_statistics = logger.get_episode_statistics_test_nondet()
-            print(printout)
-            print(episode_statistics)
+            logger.feed_eval_test(eval_dic_int_rew['train_eval'], eval_dic_done['train_eval'], eval_dic_rew['train_eval'],
+                                         eval_dic_int_rew['test_eval'], eval_dic_done['test_eval'], eval_dic_rew['test_eval'],
+                                         eval_dic_seeds['train_eval'], eval_dic_seeds['test_eval'])
+
+        # Print some stats
+        if j % args.log_interval == 0:
+            total_num_steps = (j + 1) * args.num_processes * args.num_steps
+            print('Iter {}, num timesteps {}, num training episodes {}, '
+                  'dist_entropy {:.3f}, value_loss {:.3f}, action_loss {:.3f}\n'
+                  .format(j, total_num_steps, logger.num_episodes, dist_entropy, value_loss, action_loss))
+            episode_statistics = logger.get_episode_statistics()
+
+            print(
+                'Last {} training episodes: \n'
+                'train mean/median intrinsic reward {:.1f}/{:.1f},\n'
+                'train min/max intrinsic reward {:.1f}/{:.1f}\n'
+                .format(args.num_processes,
+                        episode_statistics['Rewards/mean_episodes']['train_eval'], episode_statistics['Rewards/median_episodes']['train_eval'],
+                        episode_statistics['Rewards/min_episodes']['train_eval'], episode_statistics['Rewards/max_episodes']['train_eval']))
+
+            print(
+                'train mean/median extrinsic reward {:.1f}/{:.1f},\n'
+                'train min/max extrinsic reward {:.1f}/{:.1f}\n'
+                .format(episode_statistics['Rewards/mean_episodes']['train_eval_ext'], episode_statistics['Rewards/median_episodes']['train_eval_ext'],
+                        episode_statistics['Rewards/min_episodes']['train_eval_ext'], episode_statistics['Rewards/max_episodes']['train_eval_ext']))
+            print(
+                'test mean/median intrinsic reward {:.1f}/{:.1f},\n'
+                'test min/max intrinsic reward {:.1f}/{:.1f}\n'
+                .format(episode_statistics['Rewards/mean_episodes']['test'], episode_statistics['Rewards/median_episodes']['test'],
+                        episode_statistics['Rewards/min_episodes']['test'], episode_statistics['Rewards/max_episodes']['test']))
+
+            print(
+                'test mean/median extrinsic reward {:.1f}/{:.1f},\n'
+                'test min/max extrinsic reward {:.1f}/{:.1f}\n'
+                .format(episode_statistics['Rewards/mean_episodes']['test_ext'], episode_statistics['Rewards/median_episodes']['test_ext'],
+                        episode_statistics['Rewards/min_episodes']['test_ext'], episode_statistics['Rewards/max_episodes']['test_ext']))
 
 
-    # training done. Save and clean up
+            log = [total_num_steps] + [episode_statistics['Rewards/mean_episodes']['train_eval']] + [episode_statistics['Rewards/min_episodes']['train_eval']] + [episode_statistics['Rewards/max_episodes']['train_eval']]
+            log += [episode_statistics['Rewards/mean_episodes']['train_eval_ext']] + [episode_statistics['Rewards/min_episodes']['train_eval_ext']] + [episode_statistics['Rewards/max_episodes']['train_eval_ext']]
+            log += [episode_statistics['Rewards/mean_episodes']['train_eval_vs_oracle']] + [episode_statistics['Rewards/min_episodes']['train_eval_vs_oracle']] + [episode_statistics['Rewards/max_episodes']['train_eval_vs_oracle']]
+            log += [episode_statistics['Rewards/mean_episodes']['train_eval_completed']] + [episode_statistics['Rewards/min_episodes']['train_eval_completed']] + [episode_statistics['Rewards/max_episodes']['train_eval_completed']]
+            log += [episode_statistics['Rewards/mean_episodes']['test']] + [episode_statistics['Rewards/min_episodes']['test']] + [episode_statistics['Rewards/max_episodes']['test']]
+            log += [episode_statistics['Rewards/mean_episodes']['test_ext']] + [episode_statistics['Rewards/min_episodes']['test_ext']] + [episode_statistics['Rewards/max_episodes']['test_ext']]
+            log += [episode_statistics['Rewards/mean_episodes']['test_vs_oracle']] + [episode_statistics['Rewards/min_episodes']['test_vs_oracle']] + [episode_statistics['Rewards/max_episodes']['test_vs_oracle']]
+            log += [episode_statistics['Rewards/mean_episodes']['test_completed']] + [episode_statistics['Rewards/min_episodes']['test_completed']] + [episode_statistics['Rewards/max_episodes']['test_completed']]
+            progresslog.loc[len(progresslog)] = log
+
+            with open(logdir + '/progress_{}_seed_{}.csv'.format(args.env_name, args.seed), 'w') as f:
+                progresslog.to_csv(f, index=False)
+
+    # Training done. Save and clean up
     envs.close()
     for eval_disp_name in EVAL_ENVS:
         eval_envs_dic[eval_disp_name].close()

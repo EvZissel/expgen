@@ -1,46 +1,22 @@
 import numpy as np
 import torch
 
-from PPO_LEEP.distributions import FixedCategorical
+from PPO_maxEnt_LEEP.distributions import FixedCategorical
 from torch import nn
 
 
-def evaluate_procgen(actor_critic, eval_envs_dic, env_name, num_processes,
-                     device, steps, logger, attention_features=False, det_masks=False, deterministic=True):
-    eval_envs = eval_envs_dic[env_name]
+def evaluate_procgen(actor_critic, eval_envs, env_name,
+                     device, steps, logger, deterministic=True):
     rew_batch = []
     done_batch = []
-    if attention_features:
-
-        eval_attn_masks = (torch.sigmoid(actor_critic.base.linear_attention) > 0.5).float()
-        eval_attn_masks1 = (torch.sigmoid(actor_critic.base.block1.attention) > 0.5).float()
-        eval_attn_masks2 = (torch.sigmoid(actor_critic.base.block2.attention) > 0.5).float()
-        eval_attn_masks3 = (torch.sigmoid(actor_critic.base.block3.attention) > 0.5).float()
-    elif actor_critic.attention_size == 1:
-        eval_attn_masks = torch.zeros(num_processes, actor_critic.attention_size, device=device)
-        eval_attn_masks1 = torch.zeros(num_processes, 16, device=device)
-        eval_attn_masks2 = torch.zeros(num_processes, 32, device=device)
-        eval_attn_masks3 = torch.zeros(num_processes, 32, device=device)
-
-    else:
-        eval_attn_masks = torch.zeros(num_processes, *actor_critic.attention_size, device=device)
-        eval_attn_masks1 = torch.zeros(num_processes, 16, device=device)
-        eval_attn_masks2 = torch.zeros(num_processes, 32, device=device)
-        eval_attn_masks3 = torch.zeros(num_processes, 32, device=device)
-
 
     for t in range(steps):
         with torch.no_grad():
-            _, action, _, dist_probs, eval_recurrent_hidden_states, _, _, _, _ = actor_critic.act(
+            _, action, _, dist_probs, eval_recurrent_hidden_states = actor_critic.act(
                 logger.obs[env_name].float().to(device),
                 logger.eval_recurrent_hidden_states[env_name],
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
             # Observe reward and next obs
             next_obs, reward, done, infos = eval_envs.step(action.squeeze().cpu().numpy())
@@ -123,148 +99,77 @@ def maxEnt_oracle(obs_all, action):
 
 
 def evaluate_procgen_LEEP(actor_critic_0, actor_critic_1, actor_critic_2, actor_critic_3, eval_envs_dic, env_name,
-                          num_processes,
-                          device, steps, logger, attention_features=False, det_masks=False, deterministic=True, num_ensemble=4,
+                          device, steps, logger, deterministic=True, num_ensemble=4,
                           actor_critic_4=None, actor_critic_5=None, actor_critic_6=None, actor_critic_7=None, actor_critic_8=None, actor_critic_9=None):
     eval_envs = eval_envs_dic[env_name]
     rew_batch = []
-    int_rew_batch = []
     done_batch = []
     seed_batch = []
 
-    if attention_features:
-
-        eval_attn_masks = (torch.sigmoid(actor_critic_0.base.linear_attention) > 0.5).float()
-        eval_attn_masks1 = (torch.sigmoid(actor_critic_0.base.block1.attention) > 0.5).float()
-        eval_attn_masks2 = (torch.sigmoid(actor_critic_0.base.block2.attention) > 0.5).float()
-        eval_attn_masks3 = (torch.sigmoid(actor_critic_0.base.block3.attention) > 0.5).float()
-    elif actor_critic_0.attention_size == 1:
-        eval_attn_masks = torch.zeros(num_processes, actor_critic_0.attention_size, device=device)
-        eval_attn_masks1 = torch.zeros(num_processes, 16, device=device)
-        eval_attn_masks2 = torch.zeros(num_processes, 32, device=device)
-        eval_attn_masks3 = torch.zeros(num_processes, 32, device=device)
-
-    else:
-        eval_attn_masks = torch.zeros(num_processes, *actor_critic_0.attention_size, device=device)
-        eval_attn_masks1 = torch.zeros(num_processes, 16, device=device)
-        eval_attn_masks2 = torch.zeros(num_processes, 32, device=device)
-        eval_attn_masks3 = torch.zeros(num_processes, 32, device=device)
-
-
     for t in range(steps):
         with torch.no_grad():
-            _, action0, _, dist_probs, eval_recurrent_hidden_states, _, _, _, _ = actor_critic_0.act(
+            _, action0, _, dist_probs, eval_recurrent_hidden_states = actor_critic_0.act(
                 logger.obs[env_name].float().to(device),
                 logger.eval_recurrent_hidden_states[env_name],
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
-            _, action_1, _, dist_probs_1, eval_recurrent_hidden_states_1, _, _, _, _ = actor_critic_1.act(
+            _, action_1, _, dist_probs_1, eval_recurrent_hidden_states_1 = actor_critic_1.act(
                 logger.obs[env_name].float().to(device),
                 logger.eval_recurrent_hidden_states[env_name],
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
-            _, action_2, _, dist_probs_2, eval_recurrent_hidden_states_2, _, _, _, _ = actor_critic_2.act(
+            _, action_2, _, dist_probs_2, eval_recurrent_hidden_states_2 = actor_critic_2.act(
                 logger.obs[env_name].float().to(device),
                 logger.eval_recurrent_hidden_states[env_name],
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
-            _, action_3, _, dist_probs_3, eval_recurrent_hidden_states_3, _, _, _, _ = actor_critic_3.act(
+            _, action_3, _, dist_probs_3, eval_recurrent_hidden_states_3 = actor_critic_3.act(
                 logger.obs[env_name].float().to(device),
                 logger.eval_recurrent_hidden_states[env_name],
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
             if num_ensemble > 4:
-                _, action_4, _, dist_probs_4, eval_recurrent_hidden_states_4, _, _, _, _ = actor_critic_4.act(
+                _, action_4, _, dist_probs_4, eval_recurrent_hidden_states_4 = actor_critic_4.act(
                     logger.obs[env_name].float().to(device),
                     logger.eval_recurrent_hidden_states[env_name],
                     logger.eval_masks[env_name],
-                    attn_masks=eval_attn_masks,
-                    attn_masks1=eval_attn_masks1,
-                    attn_masks2=eval_attn_masks2,
-                    attn_masks3=eval_attn_masks3,
-                    deterministic=deterministic,
-                    reuse_masks=det_masks)
+                    deterministic=deterministic)
 
-                _, action_5, _, dist_probs_5, eval_recurrent_hidden_states_5, _, _, _, _ = actor_critic_5.act(
+                _, action_5, _, dist_probs_5, eval_recurrent_hidden_states_5 = actor_critic_5.act(
                     logger.obs[env_name].float().to(device),
                     logger.eval_recurrent_hidden_states[env_name],
                     logger.eval_masks[env_name],
-                    attn_masks=eval_attn_masks,
-                    attn_masks1=eval_attn_masks1,
-                    attn_masks2=eval_attn_masks2,
-                    attn_masks3=eval_attn_masks3,
-                    deterministic=deterministic,
-                    reuse_masks=det_masks)
+                    deterministic=deterministic)
 
                 if num_ensemble > 6:
-                    _, action_6, _, dist_probs_6, eval_recurrent_hidden_states_6, _, _, _, _ = actor_critic_6.act(
+                    _, action_6, _, dist_probs_6, eval_recurrent_hidden_states_6 = actor_critic_6.act(
                         logger.obs[env_name].float().to(device),
                         logger.eval_recurrent_hidden_states[env_name],
                         logger.eval_masks[env_name],
-                        attn_masks=eval_attn_masks,
-                        attn_masks1=eval_attn_masks1,
-                        attn_masks2=eval_attn_masks2,
-                        attn_masks3=eval_attn_masks3,
-                        deterministic=deterministic,
-                        reuse_masks=det_masks)
+                        deterministic=deterministic)
 
-                    _, action_7, _, dist_probs_7, eval_recurrent_hidden_states_7, _, _, _, _ = actor_critic_7.act(
+                    _, action_7, _, dist_probs_7, eval_recurrent_hidden_states_7 = actor_critic_7.act(
                         logger.obs[env_name].float().to(device),
                         logger.eval_recurrent_hidden_states[env_name],
                         logger.eval_masks[env_name],
-                        attn_masks=eval_attn_masks,
-                        attn_masks1=eval_attn_masks1,
-                        attn_masks2=eval_attn_masks2,
-                        attn_masks3=eval_attn_masks3,
-                        deterministic=deterministic,
-                        reuse_masks=det_masks)
+                        deterministic=deterministic)
 
                 if num_ensemble > 8:
-                    _, action_8, _, dist_probs_8, eval_recurrent_hidden_states_8, _, _, _, _ = actor_critic_8.act(
+                    _, action_8, _, dist_probs_8, eval_recurrent_hidden_states_8 = actor_critic_8.act(
                         logger.obs[env_name].float().to(device),
                         logger.eval_recurrent_hidden_states[env_name],
                         logger.eval_masks[env_name],
-                        attn_masks=eval_attn_masks,
-                        attn_masks1=eval_attn_masks1,
-                        attn_masks2=eval_attn_masks2,
-                        attn_masks3=eval_attn_masks3,
-                        deterministic=deterministic,
-                        reuse_masks=det_masks)
+                        deterministic=deterministic)
 
-                    _, action_9, _, dist_probs_9, eval_recurrent_hidden_states_9, _, _, _, _ = actor_critic_9.act(
+                    _, action_9, _, dist_probs_9, eval_recurrent_hidden_states_9 = actor_critic_9.act(
                         logger.obs[env_name].float().to(device),
                         logger.eval_recurrent_hidden_states[env_name],
                         logger.eval_masks[env_name],
-                        attn_masks=eval_attn_masks,
-                        attn_masks1=eval_attn_masks1,
-                        attn_masks2=eval_attn_masks2,
-                        attn_masks3=eval_attn_masks3,
-                        deterministic=deterministic,
-                        reuse_masks=det_masks)
+                        deterministic=deterministic)
 
             max_policy = torch.max(torch.max(torch.max(dist_probs, dist_probs_1), dist_probs_2), dist_probs_3)
             if num_ensemble > 4:
@@ -300,11 +205,9 @@ def evaluate_procgen_LEEP(actor_critic_0, actor_critic_1, actor_critic_2, actor_
                 if done[i] == 1:
                     logger.obs_sum[env_name][i] = next_obs[i].cpu()
 
-            int_reward = np.zeros_like(reward)
             next_obs_sum = logger.obs_sum[env_name] + next_obs
 
             rew_batch.append(reward)
-            int_rew_batch.append(int_reward)
             done_batch.append(done)
             seed_batch.append(seeds)
 
@@ -312,38 +215,20 @@ def evaluate_procgen_LEEP(actor_critic_0, actor_critic_1, actor_critic_2, actor_
             logger.obs_sum[env_name] = next_obs_sum
 
     rew_batch = np.array(rew_batch)
-    int_rew_batch = np.array(int_rew_batch)
     done_batch = np.array(done_batch)
     seed_batch = np.array(seed_batch)
 
-    return rew_batch, int_rew_batch, done_batch, seed_batch
+    return rew_batch, done_batch, seed_batch
 
 
 def evaluate_procgen_ensemble(actor_critic, actor_critic_1, actor_critic_2, actor_critic_3, actor_critic_4, actor_critic_5, actor_critic_6, actor_critic_7, actor_critic_8, actor_critic_9, actor_critic_maxEnt,
                               eval_envs_dic, env_name, num_processes,
-                              device, steps, logger, attention_features=False, det_masks=False, deterministic=True,
+                              device, steps, logger, deterministic=True,
                               num_detEnt=0, rand_act=False,num_ensemble=4, num_agree=4 ,maze_miner=False, num_agent=0):
     eval_envs = eval_envs_dic[env_name]
     rew_batch = []
     done_batch = []
     seed_batch = []
-
-    if attention_features:
-        eval_attn_masks = (torch.sigmoid(actor_critic.base.linear_attention) > 0.5).float()
-        eval_attn_masks1 = (torch.sigmoid(actor_critic.base.block1.attention) > 0.5).float()
-        eval_attn_masks2 = (torch.sigmoid(actor_critic.base.block2.attention) > 0.5).float()
-        eval_attn_masks3 = (torch.sigmoid(actor_critic.base.block3.attention) > 0.5).float()
-    elif actor_critic.attention_size == 1:
-        eval_attn_masks = torch.zeros(num_processes, actor_critic.attention_size, device=device)
-        eval_attn_masks1 = torch.zeros(num_processes, 16, device=device)
-        eval_attn_masks2 = torch.zeros(num_processes, 32, device=device)
-        eval_attn_masks3 = torch.zeros(num_processes, 32, device=device)
-
-    else:
-        eval_attn_masks = torch.zeros(num_processes, *actor_critic.attention_size, device=device)
-        eval_attn_masks1 = torch.zeros(num_processes, 16, device=device)
-        eval_attn_masks2 = torch.zeros(num_processes, 32, device=device)
-        eval_attn_masks3 = torch.zeros(num_processes, 32, device=device)
 
     m = FixedCategorical(
         torch.tensor([0.55, 0.25, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025]).repeat(num_processes, 1)) #worked for maze
@@ -353,130 +238,75 @@ def evaluate_procgen_ensemble(actor_critic, actor_critic_1, actor_critic_2, acto
     maxEnt_steps = torch.zeros(num_processes, 1, device=device)
     for t in range(steps):
         with torch.no_grad():
-            _, action0, _, dist_probs, eval_recurrent_hidden_states, _, _, _, _ = actor_critic.act(
+            _, action0, _, dist_probs, eval_recurrent_hidden_states = actor_critic.act(
                 logger.obs[env_name].float().to(device),
                 torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
-            _, action1, _, dist_probs1, eval_recurrent_hidden_states1, _, _, _, _ = actor_critic_1.act(
+            _, action1, _, dist_probs1, eval_recurrent_hidden_states1 = actor_critic_1.act(
                 logger.obs[env_name].float().to(device),
                 torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
-            _, action2, _, dist_probs2, eval_recurrent_hidden_states2, _, _, _, _ = actor_critic_2.act(
+            _, action2, _, dist_probs2, eval_recurrent_hidden_states2 = actor_critic_2.act(
                 logger.obs[env_name].float().to(device),
                 torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
-            _, action3, _, dist_probs3, eval_recurrent_hidden_states3, _, _, _, _ = actor_critic_3.act(
+            _, action3, _, dist_probs3, eval_recurrent_hidden_states3 = actor_critic_3.act(
                 logger.obs[env_name].float().to(device),
                 torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
 
-            _, action_maxEnt, _, dist_probs_maxEnt, eval_recurrent_hidden_states_maxEnt, _, _, _, _ = actor_critic_maxEnt.act(
+            _, action_maxEnt, _, dist_probs_maxEnt, eval_recurrent_hidden_states_maxEnt = actor_critic_maxEnt.act(
                 logger.obs[env_name].float().to(device),
                 logger.eval_recurrent_hidden_states_maxEnt[env_name],
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
             if num_ensemble > 4:
-                _, action4, _, dist_probs4, eval_recurrent_hidden_states4, _, _, _, _ = actor_critic_4.act(
+                _, action4, _, dist_probs4, eval_recurrent_hidden_states4 = actor_critic_4.act(
                     logger.obs[env_name].float().to(device),
                     torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                     logger.eval_masks[env_name],
-                    attn_masks=eval_attn_masks,
-                    attn_masks1=eval_attn_masks1,
-                    attn_masks2=eval_attn_masks2,
-                    attn_masks3=eval_attn_masks3,
-                    deterministic=deterministic,
-                    reuse_masks=det_masks)
+                    deterministic=deterministic)
 
-                _, action5, _, dist_probs5, eval_recurrent_hidden_states5, _, _, _, _ = actor_critic_5.act(
+                _, action5, _, dist_probs5, eval_recurrent_hidden_states5 = actor_critic_5.act(
                     logger.obs[env_name].float().to(device),
                     torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                     logger.eval_masks[env_name],
-                    attn_masks=eval_attn_masks,
-                    attn_masks1=eval_attn_masks1,
-                    attn_masks2=eval_attn_masks2,
-                    attn_masks3=eval_attn_masks3,
-                    deterministic=deterministic,
-                    reuse_masks=det_masks)
+                    deterministic=deterministic)
 
             if num_ensemble > 6:
-                _, action6, _, dist_probs6, eval_recurrent_hidden_states6, _, _, _, _ = actor_critic_6.act(
+                _, action6, _, dist_probs6, eval_recurrent_hidden_states6 = actor_critic_6.act(
                     logger.obs[env_name].float().to(device),
                     torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                     logger.eval_masks[env_name],
-                    attn_masks=eval_attn_masks,
-                    attn_masks1=eval_attn_masks1,
-                    attn_masks2=eval_attn_masks2,
-                    attn_masks3=eval_attn_masks3,
-                    deterministic=deterministic,
-                    reuse_masks=det_masks)
+                    deterministic=deterministic)
 
-                _, action7, _, dist_probs7, eval_recurrent_hidden_states7, _, _, _, _ = actor_critic_7.act(
+                _, action7, _, dist_probs7, eval_recurrent_hidden_states7= actor_critic_7.act(
                     logger.obs[env_name].float().to(device),
                     torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                     logger.eval_masks[env_name],
-                    attn_masks=eval_attn_masks,
-                    attn_masks1=eval_attn_masks1,
-                    attn_masks2=eval_attn_masks2,
-                    attn_masks3=eval_attn_masks3,
-                    deterministic=deterministic,
-                    reuse_masks=det_masks)
+                    deterministic=deterministic)
 
             if num_ensemble > 8:
-                _, action8, _, dist_probs8, eval_recurrent_hidden_states8, _, _, _, _ = actor_critic_8.act(
+                _, action8, _, dist_probs8, eval_recurrent_hidden_states8 = actor_critic_8.act(
                     logger.obs[env_name].float().to(device),
                     torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                     logger.eval_masks[env_name],
-                    attn_masks=eval_attn_masks,
-                    attn_masks1=eval_attn_masks1,
-                    attn_masks2=eval_attn_masks2,
-                    attn_masks3=eval_attn_masks3,
-                    deterministic=deterministic,
-                    reuse_masks=det_masks)
+                    deterministic=deterministic)
 
-                _, action9, _, dist_probs9, eval_recurrent_hidden_states9, _, _, _, _ = actor_critic_9.act(
+                _, action9, _, dist_probs9, eval_recurrent_hidden_states9 = actor_critic_9.act(
                     logger.obs[env_name].float().to(device),
                     torch.zeros(num_processes, actor_critic.recurrent_hidden_state_size, device=device),
                     logger.eval_masks[env_name],
-                    attn_masks=eval_attn_masks,
-                    attn_masks1=eval_attn_masks1,
-                    attn_masks2=eval_attn_masks2,
-                    attn_masks3=eval_attn_masks3,
-                    deterministic=deterministic,
-                    reuse_masks=det_masks)
+                    deterministic=deterministic)
 
             actions = []
             actions.append(action0)
@@ -487,7 +317,7 @@ def evaluate_procgen_ensemble(actor_critic, actor_critic_1, actor_critic_2, acto
                             + 1 * (action3 == 0) + 1 * (action3 == 1) + 1 * (action3 == 2)
             cardinal_right  = 1*(action0 == 6)+1*(action0 == 7) + 1*(action0 == 8) + 1*(action1 == 6)+1*(action1 == 7) + 1*(action1 == 8) + 1*(action2 == 6)+1*(action2 == 7) + 1*(action2 == 8)\
                             + 1 * (action3 == 6) + 1 * (action3 == 7) + 1 * (action3 == 8)
-            if (maze_miner):  #maze and miner do not have right down/up left down/up
+            if (maze_miner):  #Maze and Miner do not have right down/up left down/up
                 cardinal_down = 1 * (action0 == 3) + 1 * (action1 == 3) + 1 * (action2 == 3) + 1 * (action3 == 3)
                 cardinal_up = 1 * (action0 == 5) + 1 * (action1 == 5) + 1 * (action2 == 5) + 1 * (action3 == 5)
             else:
@@ -594,9 +424,7 @@ def evaluate_procgen_ensemble(actor_critic, actor_critic_1, actor_critic_2, acto
                 [[0.0] if done_ else [1.0] for done_ in done],
                 dtype=torch.float32,
                 device=device)
-            logger.eval_recurrent_hidden_states[env_name] = eval_recurrent_hidden_states
-            logger.eval_recurrent_hidden_states1[env_name] = eval_recurrent_hidden_states1
-            logger.eval_recurrent_hidden_states2[env_name] = eval_recurrent_hidden_states2
+            # Only for recurrent networks
             logger.eval_recurrent_hidden_states_maxEnt[env_name] = eval_recurrent_hidden_states_maxEnt
 
             seeds = np.zeros_like(reward)
@@ -614,9 +442,7 @@ def evaluate_procgen_ensemble(actor_critic, actor_critic_1, actor_critic_2, acto
     return rew_batch, done_batch
 
 def evaluate_procgen_maxEnt_avepool_original_L2(actor_critic, eval_envs_dic, eval_envs_dic_full_obs, env_name,
-                                             num_processes,
-                                             device, steps, logger, num_buffer, kernel_size=3, stride=3, attention_features=False,
-                                             det_masks=False, deterministic=True, p_norm=2, neighbor_size=1):
+                                             device, steps, logger, num_buffer, kernel_size=3, stride=3, deterministic=True, p_norm=2, neighbor_size=1):
     eval_envs = eval_envs_dic[env_name]
     eval_envs_full_obs = eval_envs_dic_full_obs[env_name]
     rew_batch = []
@@ -624,36 +450,15 @@ def evaluate_procgen_maxEnt_avepool_original_L2(actor_critic, eval_envs_dic, eva
     done_batch = []
     seed_batch = []
     down_sample_avg = nn.AvgPool2d(kernel_size, stride=stride)
-    if attention_features:
-        eval_attn_masks = (torch.sigmoid(actor_critic.base.linear_attention) > 0.5).float()
-        eval_attn_masks1 = (torch.sigmoid(actor_critic.base.block1.attention) > 0.5).float()
-        eval_attn_masks2 = (torch.sigmoid(actor_critic.base.block2.attention) > 0.5).float()
-        eval_attn_masks3 = (torch.sigmoid(actor_critic.base.block3.attention) > 0.5).float()
-    elif actor_critic.attention_size == 1:
-        eval_attn_masks = torch.zeros(num_processes, actor_critic.attention_size, device=device)
-        eval_attn_masks1 = torch.zeros(num_processes, 16, device=device)
-        eval_attn_masks2 = torch.zeros(num_processes, 32, device=device)
-        eval_attn_masks3 = torch.zeros(num_processes, 32, device=device)
-
-    else:
-        eval_attn_masks = torch.zeros(num_processes, *actor_critic.attention_size, device=device)
-        eval_attn_masks1 = torch.zeros(num_processes, 16, device=device)
-        eval_attn_masks2 = torch.zeros(num_processes, 32, device=device)
-        eval_attn_masks3 = torch.zeros(num_processes, 32, device=device)
 
 
     for t in range(steps):
         with torch.no_grad():
-            _, action, _, dist_probs, eval_recurrent_hidden_states, _, _, _, _ = actor_critic.act(
+            _, action, _, dist_probs, eval_recurrent_hidden_states = actor_critic.act(
                 logger.obs[env_name].float().to(device),
                 logger.eval_recurrent_hidden_states[env_name],
                 logger.eval_masks[env_name],
-                attn_masks=eval_attn_masks,
-                attn_masks1=eval_attn_masks1,
-                attn_masks2=eval_attn_masks2,
-                attn_masks3=eval_attn_masks3,
-                deterministic=deterministic,
-                reuse_masks=det_masks)
+                deterministic=deterministic)
 
 
             # Observe reward and next obs

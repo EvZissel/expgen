@@ -3,7 +3,7 @@ import os
 
 import torch.nn as nn
 
-from PPO_LEEP.envs import VecNormalize
+from PPO_maxEnt_LEEP.envs import VecNormalize
 import pickle
 
 

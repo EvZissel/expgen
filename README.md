@@ -2,18 +2,19 @@
 
 PyTorch implementation of ExpGen [[Paper]](https://arxiv.org/abs/2306.03072) (NeurIPS'23).
 
-![ExpGen Overview](./figures/ExpGen_NeurIPS2023_Thumbnail.png)
+![ExpGen Overview](./figures/gitHub_GIF.gif)
 
 # Citation
 
 Please cite using the following entry (bibtex):
 
 ```
-@article{zisselman2023explore,
+@article{zisselman2024explore,
   title={Explore to Generalize in Zero-Shot RL},
   author={Zisselman, Ev and Lavie, Itai and Soudry, Daniel and Tamar, Aviv},
-  journal={arXiv preprint arXiv:2306.03072},
-  year={2023}
+  journal={Advances in Neural Information Processing Systems},
+  volume={36},
+  year={2024}
 }
 ```
 
@@ -42,17 +43,17 @@ Example of training ExpGen on [ProcGen environments](https://openai.com/blog/pro
 ## Train a reward maximizing agent 
 Use a range of different seed values to produce an ensemble of agents:
 ```
-python train_ppo.py --env-name maze --seed 0 
+python train_ppo.py --env-name maze --seed 0 --use_backgrounds
 ```
 Note: Use seed values 0-9 to reproduce the results presented in the paper.
 
 ## Train a maxEnt agent
 ```
-python train_maxEnt.py --env-name maze
+python train_maxEnt.py --env-name maze --seed 0 --use_backgrounds
 ```
 ## Evaluate ExpGen
 ```
-python expgen_ensemble.py --env-name maze
+python expgen_ensemble.py --env-name maze --use_backgrounds
 ```
 
 Note: The hyperparameters used in the paper are set as default values in code.
