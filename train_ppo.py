@@ -87,7 +87,7 @@ def main():
         envs.observation_space.shape,
         envs.action_space,
         base=ImpalaModel,
-        base_kwargs={'recurrent': False,'hidden_size': args.recurrent_hidden_size,'gray_scale': args.gray_scale})
+        base_kwargs={'recurrent': args.recurrent_policy,'hidden_size': args.recurrent_hidden_size,'gray_scale': args.gray_scale})
     actor_critic.to(device)
 
     # Training agent
