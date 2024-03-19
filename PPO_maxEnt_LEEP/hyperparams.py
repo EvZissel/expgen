@@ -39,5 +39,5 @@ num_agree = {
 num_env_steps = {
     'PPO': 25e6,
     'maxEnt': 100e6,
-    'ensemble': 25e6,
+    'ensemble': 1e6,
 }

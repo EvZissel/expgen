@@ -201,9 +201,9 @@ def main():
     actor_critic_weighs = torch.load(os.path.join(save_path, args.env_name + '-epoch-1524.pt'),map_location=device)
     actor_critic9.load_state_dict(actor_critic_weighs['state_dict'])
 
-    save_path =  args.env_name + '_ppo_seed_5maxEnt'
+    save_path =  args.env_name + '_ppo_seed_0_maxEnt'
     save_path = os.path.join(os.path.expanduser(args.log_dir), save_path)
-    actor_critic_weighs = torch.load(os.path.join(save_path,  args.env_name + '-epoch-6102.pt'), map_location=device)
+    actor_critic_weighs = torch.load(os.path.join(save_path,  args.env_name + '-epoch-6100.pt'), map_location=device)
     actor_critic_maxEnt.load_state_dict(actor_critic_weighs['state_dict'])
 
     logger = Logger(args.num_processes, eval_envs_dic['train_eval'].observation_space.shape, eval_envs_dic['train_eval'].observation_space.shape, actor_critic_maxEnt.recurrent_hidden_state_size, device=device)
@@ -216,8 +216,9 @@ def main():
     logger.obs['test_eval'].copy_(obs_test)
     logger.obs_sum['test_eval'].copy_(obs_test)
 
+    num_env_steps = hps.num_env_steps['ensemble']
     num_updates = int(
-        args.num_env_steps) // args.num_steps // args.num_processes
+        num_env_steps) // args.num_steps // args.num_processes
 
     for j in range(args.continue_from_epoch, args.continue_from_epoch+num_updates):
 

@@ -25,6 +25,8 @@ def main():
         torch.backends.cudnn.deterministic = True
 
     logdir_ = args.env_name + '_ppo' + '_seed_' + str(args.seed)
+    if args.mask_all:
+        logdir_ += '_mask_all'
 
     logdir = os.path.join(os.path.expanduser(args.log_dir), logdir_)
     utils.cleanup_log_dir(logdir)

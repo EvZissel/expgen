@@ -68,6 +68,11 @@ Alternatively, **ExpGen** can also utilize invariance based approaches such as a
 
 ![ProcGen Test Results expgen-idaac](./figures/results_expgen-idaac.png)
 
+# Hidden Maze Experiment 
+To reproduce the results of the hidden maze experiment (see Appendix A), use the following command:
+```
+python train_ppo.py --env-name maze --seed 0 --num-level 128 --recurrent-policy --mask_all --use_generated_assets --restrict_themes --use_monochrome_assets
+```
 ### Acknowledgements
 This code is based on the open-source PyTorch implementation of [PPO](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail).
 
