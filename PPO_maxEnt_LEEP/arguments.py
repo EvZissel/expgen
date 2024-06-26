@@ -56,7 +56,7 @@ def get_args():
     parser.add_argument(
         '--num-test-level', type=int, default=200, help='num test level (default: 200)')
     parser.add_argument(
-        '--distribution-mode', type=str, default='easy', help='distribution mode for environment')
+        '--distribution-mode', type=str, default='easy', help='distribution mode for procgen environment (default: easy)')
     parser.add_argument(
         '--cuda-deterministic',
         action='store_true',
@@ -66,12 +66,12 @@ def get_args():
         '--num-processes',
         type=int,
         default=32,
-        help='how many training CPU processes to use (default: 16)')
+        help='how many training CPU processes to use (default: 32)')
     parser.add_argument(
         '--num-steps',
         type=int,
         default=512,
-        help='number of forward steps in A2C (default: 5)')
+        help='number of forward steps in ppo (default: 5)')
     parser.add_argument(
         '--ppo-epoch',
         type=int,
@@ -81,7 +81,7 @@ def get_args():
         '--num-mini-batch',
         type=int,
         default=8,
-        help='number of batches for ppo (default: 32)')
+        help='number of batches for ppo (default: 8)')
     parser.add_argument(
         '--clip-param',
         type=float,
@@ -96,7 +96,7 @@ def get_args():
         '--save-interval',
         type=int,
         default=1525,
-        help='save interval, one save per n updates (default: 10e2)')
+        help='save interval, one save per n updates (default: 1525)')
     parser.add_argument(
         '--eval-interval',
         type=int,
@@ -106,7 +106,7 @@ def get_args():
         '--num-env-steps',
         type=int,
         default=25e6,
-        help='number of environment steps to train (default: 10e6)')
+        help='number of environment steps to train (default: 25e6)')
     parser.add_argument(
         '--env-name',
         default='maze',
@@ -127,39 +127,39 @@ def get_args():
         '--no-cuda',
         action='store_true',
         default=False,
-        help='disables CUDA training')
+        help='disables CUDA training (default: False)')
     parser.add_argument(
         '--gpu_device',
         type=int,
         default = int(0),
         required=False,
-        help = 'visible device in CUDA')
+        help = 'visible device in CUDA (default: 0)')
     parser.add_argument(
         '--use-proper-time-limits',
         action='store_true',
         default=False,
-        help='compute returns taking into account time limits')
+        help='compute returns taking into account time limits (default: False)')
     parser.add_argument(
         '--recurrent-policy',
         action='store_true',
         default=False,
-        help='use a recurrent policy')
+        help='use a recurrent policy (default: False)')
     parser.add_argument(
         '--obs_recurrent',
         action='store_true',
         default=False,
-        help='use a recurrent policy and observations input')
+        help='use a recurrent policy and observations input (default: False)')
     parser.add_argument(
         '--recurrent-hidden-size',
         type=int,
         default=int(256),
         required=False,
-        help='GRU hidden layer size')
+        help='GRU hidden layer size (default: 256)')
     parser.add_argument(
         '--continue_from_epoch',
         type=int,
         default=0,
-        help='load previous training (from model save dir) and continue')
+        help='load previous training (from model save dir) and continue training from epoch (default: 0)')
     parser.add_argument(
         '--saved_epoch',
         type=int,
@@ -174,62 +174,62 @@ def get_args():
         '--task_steps',
         type=int,
         default=512,
-        help='number of steps in each task')
+        help='number of steps in each task (default: 512)')
     parser.add_argument(
         '--weight_decay',
         type=float,
         default=0.0,
-        help='weight decay in Adam')
+        help='weight decay in Adam (default: 0.0)')
     parser.add_argument(
         '--no_normalize',
         action='store_true',
         default=False,
-        help='no normalize inputs')
+        help='no normalize inputs (default: False)')
     parser.add_argument(
         '--normalize_rew',
         action='store_true',
         default=False,
-        help='normalize reword')
+        help='normalize reword (default: False)')
     parser.add_argument(
         '--mask_size',
         type=int,
         default=0,
-        help='constant mask size')
+        help='constant mask size (default: 0)')
     parser.add_argument(
         '--mask_all',
         action='store_true',
         default=False,
-        help='mask all frame')
+        help='mask all frame (default: False)')
     parser.add_argument(
         '--num_c',
         type=int,
         default=4,
-        help='number of ensemble environments')
+        help='number of ensemble environments (default: 4)')
     parser.add_argument(
         '--KLdiv_loss',
         action='store_true',
         default=False,
-        help='use the KLdiv loss between the maxEnt policy and the extrinsic reward policy')
+        help='use the KLdiv loss between the maxEnt policy and the extrinsic reward policy (default: False)')
     parser.add_argument(
         '--use_generated_assets',
         action='store_true',
         default=False,
-        help='use_generated_assets = True for maze')
+        help='use_generated_assets = True for maze (default: False)')
     parser.add_argument(
         '--use_backgrounds',
         action='store_true',
         default=False,
-        help='use_generated_assets = False for maze')
+        help='use_generated_assets = False for maze (default: False)')
     parser.add_argument(
         '--restrict_themes',
         action='store_true',
         default=False,
-        help='use_generated_assets = True for maze')
+        help='use_generated_assets = True for maze (default: False)')
     parser.add_argument(
         '--use_monochrome_assets',
         action='store_true',
         default=False,
-        help='use_generated_assets = True for maze')
+        help='use_generated_assets = True for maze (default: False)')
     parser.add_argument(
         '--num_buffer',
         type=int,
@@ -254,12 +254,12 @@ def get_args():
         '--rand_act',
         action='store_true',
         default=False,
-        help='if maxEnt step or random step')
+        help='if maxEnt step or random step (default: False)')
     parser.add_argument(
         '--gray_scale',
         action='store_true',
         default=False,
-        help='if learns form gray scale image')
+        help='if learns form gray scale image (default: False)')
     parser.add_argument(
         '--reset_cont',
         type=int,
@@ -269,7 +269,7 @@ def get_args():
         '--center_agent',
         action='store_true',
         default=False,
-        help='if agent is centered')
+        help='if agent is centered (default: False)')
     parser.add_argument(
         '--kernel_size',
         type=int,
@@ -284,12 +284,12 @@ def get_args():
         '--num_ensemble',
         type=int,
         default=10,
-        help='number of ensemble networks (default: 4)')
+        help='number of ensemble networks (default: 10)')
     parser.add_argument(
         '--num_agree',
         type=int,
         default=6,
-        help='number of networks that should agree (default: 4)')
+        help='number of networks that should agree (default: 6)')
     parser.add_argument(
         '--num_agent',
         type=int,
