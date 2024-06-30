@@ -234,7 +234,7 @@ def get_args():
         '--num_buffer',
         type=int,
         default=500,
-        help='number of images to evaluate k-NN (default: 256, maximum: num-steps)')
+        help='number of images to evaluate k-NN (default: 500, maximum: num-steps)')
     parser.add_argument(
         '--neighbor_size',
         type=int,

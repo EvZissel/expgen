@@ -12,7 +12,8 @@ import pathlib
 env = 'maze'
 seed = '0'
 logdir = './logs'
-filedir = pathlib.Path(logdir,env+'_ppo_seed_'+ seed + '_ensemble')
+# filedir = pathlib.Path(logdir,env+'_ppo_seed_'+ seed + '_ensemble')
+filedir = pathlib.Path(logdir,env+'_ppo_seed_'+ seed + '_mask_all')
 file = pathlib.Path(filedir,'progress_'+env+'_seed_'+seed+'.csv')
 
 fig, axs = plt.subplots(nrows=2, ncols=3,figsize=(16, 6), dpi=300)
