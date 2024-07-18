@@ -36,6 +36,9 @@ conda activate expgen_env
 
 pip install procgen
 ```
+**Note**: If you face an issue with libffi/cffi  
+`ImportError: libffi.so.7: cannot open shared object file: No such file or directory`  
+try installing `cffi` directly using ```pip install cffi==1.13.0```
 
 # Example: Train ExpGen on ProcGen Maze
 Example of training ExpGen on [ProcGen environments](https://openai.com/blog/procgen-benchmark/):

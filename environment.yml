@@ -1,4 +1,4 @@
-name: expgen_env
+name: expgen_env_test
 channels:
   - pytorch
   - conda-forge
@@ -10,9 +10,9 @@ dependencies:
   - cmake=3.14.0
   - python=3.7.3
   - qt=5.12.5
+  - matplotlib
   - pip
   - pip:
-    - matplotlib==3.4.1
     - numpy==1.17.2
     - torch==1.8.1
     - torchmeta==1.7.0
@@ -21,3 +21,4 @@ dependencies:
     - gym3==0.3.3
     - h5py==3.2.1
     - filelock==3.0.10
+    - cffi==1.13.0
