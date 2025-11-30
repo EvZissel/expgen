@@ -9,12 +9,13 @@ PyTorch implementation of ExpGen [[Paper]](https://arxiv.org/abs/2306.03072) (Ne
 Please cite using the following entry (bibtex):
 
 ```
-@article{zisselman2024explore,
-  title={Explore to Generalize in Zero-Shot RL},
+@article{zisselman2023explore,
+  title={Explore to generalize in zero-shot rl},
   author={Zisselman, Ev and Lavie, Itai and Soudry, Daniel and Tamar, Aviv},
   journal={Advances in Neural Information Processing Systems},
   volume={36},
-  year={2024}
+  pages={63174--63196},
+  year={2023}
 }
 ```
 
